@@ -37,9 +37,10 @@ const consume = async () => {
         const result = await redisConsumer.brpop(QUEUE_NAME, 0);
         if (result) {
             const [queue, submissionId] = result;  
+            console.log("Updating grading status for submissionId:", submissionId, "processing");
             await sql`
                 UPDATE exercise_submissions 
-                SET grading_status = 'in_review' 
+                SET grading_status = 'processing' 
                 WHERE id = ${submissionId};
                 `;
 
@@ -47,6 +48,7 @@ const consume = async () => {
             await new Promise((resolve) => setTimeout(resolve, gradingTime));
 
             const grade = Math.floor(Math.random() * 101);
+            console.log("Grading completed for submissionId:", submissionId, "with grade:", grade);
             await sql`
                 UPDATE exercise_submissions 
                 SET grading_status = 'graded', grade = ${grade} 

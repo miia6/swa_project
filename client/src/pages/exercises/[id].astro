@@ -8,6 +8,5 @@ const { id } = Astro.params;
 ---
 
 <Layout title="Exercise">
-    <p>Exercise {id}</p>
-    <Exercise client:load />
+    <Exercise id={id} client:load />
 </Layout>

@@ -78,16 +78,55 @@ app.get("/api/languages/:id/exercises", async (c) => {
 });
 
 app.post("/api/exercises/:id/submissions", async (c) => {
+  console.log("HEREEEEEEEEEEE ")
     const id = c.req.param("id");
     const { source_code } = await c.req.json();
+    console.log("id, source_code: ", id, source_code);
 
     const [submission] = await sql`
         INSERT INTO exercise_submissions (exercise_id, source_code, grading_status)
         VALUES (${id}, ${source_code}, 'pending')
         RETURNING id;`
 
-    await redis.lpush(QUEUE_NAME, submission.id);
+    await redisConsumer.lpush(QUEUE_NAME, submission.id);
     return c.json({ id: submission.id });
-})
+});
+
+app.get("/api/exercises/:id", async (c) => {
+    const id = c.req.param("id");
+    const exercise = await sql`SELECT id, title, description FROM exercises WHERE id = ${id}`;
+
+    if (exercise.length === 0) {
+        return new Response("Exercise not found", { status: 404 });
+    }
+
+    const exerciseData = exercise[0];
+
+    const response = new Response(JSON.stringify(exerciseData), {
+      headers: { "Content-Type": "application/json" },
+    });
+    
+    //console.log(response);
+    return response;
+});
+
+app.get("/api/submissions/:id/status", async (c) => {
+  const id = c.req.param("id");
+  const submission = await sql`SELECT grading_status, grade FROM exercise_submissions WHERE id = ${id}`;
+
+  if (submission.length === 0) {
+      return new Response("Submission not found", { status: 404 });
+  }
+
+  const submissionData = submission[0];
+
+  const response = new Response(JSON.stringify(submissionData), {
+    headers: { "Content-Type": "application/json" },
+  });
+
+  //console.log(response);
+  return response;
+});
+
 
 export default app;

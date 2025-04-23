@@ -4,22 +4,28 @@ services:
     restart: unless-stopped
     volumes:
       - ./server:/app
-    ports:
-      - 8000:8000
     env_file:
       - project.env
     depends_on:
       - database
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.server-router.entrypoints=web"
+      - "traefik.http.routers.server-router.rule=PathPrefix(`/api`)"
+      - "traefik.http.services.server-service.loadbalancer.server.port=8000"
 
   client:
     build: client
     restart: unless-stopped
     volumes:
       - ./client:/app
-    ports:
-      - 4321:4321
     depends_on:
       - server
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.client-router.entrypoints=web"
+      - "traefik.http.routers.client-router.rule=PathPrefix(`/`)"
+      - "traefik.http.services.client-service.loadbalancer.server.port=4321"
       
   database:
     container_name: postgresql_database
@@ -58,3 +64,23 @@ services:
     depends_on:
       - redis
       - database
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grader-api.entrypoints=web"
+      - "traefik.http.routers.grader-api.rule=PathPrefix(`/grader-api`)"
+      - "traefik.http.routers.grader-api.middlewares=grader-api-replacepath"
+      - "traefik.http.middlewares.grader-api-replacepath.replacePathRegex.regex=^/grader-api(.*)"
+      - "traefik.http.middlewares.grader-api-replacepath.replacePathRegex.replacement=/api$1"
+      - "traefik.http.services.grader-api.loadbalancer.server.port=8000"
+      
+  traefik:
+    image: traefik:v3.3
+    command:
+      - "--api.insecure=true" 
+      - "--providers.docker=true"  
+      - "--entrypoints.web.address=:8000"  
+    ports:
+      - "8080:8080"  
+      - "8000:8000"  
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"  
