@@ -9,9 +9,10 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/svelte": "^7.0.6",
+    "@astrojs/svelte": "^7.0.13",
     "@deno/astro-adapter": "^0.3.0",
     "astro": "^5.5.2",
-    "svelte": "^5.23.0"
+    "better-auth": "^1.2.12",
+    "svelte": "^5.32.1"
   }
 }

@@ -11,7 +11,8 @@ app.use("/*", logger());
 
 const sql = postgres();
 
-/*let redisConsumer;
+//const redisConsumer = new Redis(6379, "redis");
+let redisConsumer;
 if (Deno.env.get("REDIS_HOST")) {
     redisConsumer = new Redis(
         Number.parseInt(Deno.env.get("REDIS_PORT")),
@@ -19,9 +20,7 @@ if (Deno.env.get("REDIS_HOST")) {
     );
 } else {
     redisConsumer = new Redis(6379, "redis");
-}*/
-
-const redisConsumer = new Redis(6379, "redis");
+}
 const QUEUE_NAME = "submissions";
 
 let consumeEnabled = false;

@@ -1,6 +1,9 @@
 <script>
     import { onMount } from 'svelte';
+    import { useUserState } from "../states/userState.svelte.js";
     export let id;
+
+    const userState = useUserState();
 
     let title = '';
     let description = '';
@@ -80,13 +83,19 @@
 <h1>{title}</h1>
 <p>{description}</p>
 
-<div>
-    <textarea
-        bind:value={text}
-        placeholder="Write your code here..."
-    ></textarea>  
-    <button onclick={() => sendExercise()}>Submit</button>
-</div>
+{#if userState.loading}
+    <p>Loading...</p>
+{:else if userState.email}
+    <div>
+        <textarea
+            bind:value={text}
+            placeholder="Write your code here..."
+        ></textarea>  
+        <button onclick={() => sendExercise()}>Submit</button>
+    </div>
 
-<p>Grading status: {status}</p>
-<p>Grade: {grade}</p>
+    <p>Grading status: {status}</p>
+    <p>Grade: {grade}</p>
+{:else}
+    <p>Login or register to complete exercises.</p>
+{/if}

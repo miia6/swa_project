@@ -4,25 +4,57 @@ import { logger } from "@hono/hono/logger";
 import { cache } from "@hono/hono/cache";
 import { Redis } from "ioredis";
 import postgres from "postgres";
+import { auth } from "./auth.js";
 
 const app = new Hono();
 const sql = postgres();
 
+app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+
 app.use("/*", cors());
 app.use("/*", logger());
 
-/*let redis;
+//const redisProducer = new Redis(6379, "redis");
+let redisProducer;
 if (Deno.env.get("REDIS_HOST")) {
-  redis = new Redis(
+  redisProducer = new Redis(
     Number.parseInt(Deno.env.get("REDIS_PORT")),
     Deno.env.get("REDIS_HOST"),
   );
 } else {
-  redis = new Redis(6379, "redis");
-}*/
-
-const redisConsumer = new Redis(6379, "redis");
+  redisProducer = new Redis(6379, "redis");
+}
 const QUEUE_NAME = 'submissions';
+
+app.use("*", async (c, next) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session) {
+    return next();
+  }
+
+  c.set("user", session.user.name);
+  return next();
+});
+
+app.use("/api/exercises/:id/submissions", async (c, next) => {
+  const user = c.get("user");
+  if (!user) {
+    c.status(401);
+    return c.json({ message: "Unauthorized" });
+  }
+
+  return next();
+});
+
+app.use("/api/submissions/:id/status", async (c, next) => {
+  const user = c.get("user");
+  if (!user) {
+    c.status(401);
+    return c.json({ message: "Unauthorized" });
+  }
+
+  return next();
+});
 
 app.get(
     "/api/languages",
@@ -78,7 +110,6 @@ app.get("/api/languages/:id/exercises", async (c) => {
 });
 
 app.post("/api/exercises/:id/submissions", async (c) => {
-  console.log("HEREEEEEEEEEEE ")
     const id = c.req.param("id");
     const { source_code } = await c.req.json();
     console.log("id, source_code: ", id, source_code);
@@ -88,7 +119,7 @@ app.post("/api/exercises/:id/submissions", async (c) => {
         VALUES (${id}, ${source_code}, 'pending')
         RETURNING id;`
 
-    await redisConsumer.lpush(QUEUE_NAME, submission.id);
+    await redisProducer.lpush(QUEUE_NAME, submission.id);
     return c.json({ id: submission.id });
 });
 
