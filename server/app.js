@@ -112,11 +112,17 @@ app.get("/api/languages/:id/exercises", async (c) => {
 app.post("/api/exercises/:id/submissions", async (c) => {
     const id = c.req.param("id");
     const { source_code } = await c.req.json();
-    console.log("id, source_code: ", id, source_code);
+    const user = c.get("user");
+    
+    // Get user ID from session
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    const userId = session.user.id;
+    
+    console.log("id, source_code, user_id: ", id, source_code, userId);
 
     const [submission] = await sql`
-        INSERT INTO exercise_submissions (exercise_id, source_code, grading_status)
-        VALUES (${id}, ${source_code}, 'pending')
+        INSERT INTO exercise_submissions (exercise_id, source_code, grading_status, user_id)
+        VALUES (${id}, ${source_code}, 'pending', ${userId})
         RETURNING id;`
 
     await redisProducer.lpush(QUEUE_NAME, submission.id);
@@ -143,7 +149,17 @@ app.get("/api/exercises/:id", async (c) => {
 
 app.get("/api/submissions/:id/status", async (c) => {
   const id = c.req.param("id");
-  const submission = await sql`SELECT grading_status, grade FROM exercise_submissions WHERE id = ${id}`;
+  
+  // Get user ID from session
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  const userId = session.user.id;
+  
+  // Query submission with user_id check
+  const submission = await sql`
+    SELECT grading_status, grade 
+    FROM exercise_submissions 
+    WHERE id = ${id} AND user_id = ${userId}
+  `;
 
   if (submission.length === 0) {
       return new Response("Submission not found", { status: 404 });
@@ -155,7 +171,6 @@ app.get("/api/submissions/:id/status", async (c) => {
     headers: { "Content-Type": "application/json" },
   });
 
-  //console.log(response);
   return response;
 });
 
