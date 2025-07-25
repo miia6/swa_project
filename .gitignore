@@ -1,2 +1,5 @@
 .env
 /client/node_modules
+/postgres-data
+/lgtm-data
+/node_modules
